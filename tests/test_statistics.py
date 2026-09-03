@@ -43,6 +43,10 @@ def test_a_convincing_looking_win_is_not_significant_at_fifty_episodes():
     assert exact_mcnemar_p(12, 4) > 0.05
 
 
+def test_mcnemar_is_symmetric():
+    assert exact_mcnemar_p(9, 3) == exact_mcnemar_p(3, 9)
+
+
 def test_small_differences_need_implausible_episode_counts():
     assert data_needed_for(0.05) > 1000
     assert data_needed_for(0.20) < 150
