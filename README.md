@@ -106,10 +106,18 @@ that, it will not separate two real checkpoints either.
 
 ## Wiring in real policies
 
-`LeRobotEnv` and `LeRobotPolicy` are adapters with signatures identical to the
-toy ones, so the harness and its statistics are validated on the toy task and
-then run unchanged on gym-pusht or gym-aloha with an ACT, Diffusion Policy,
-SmolVLA, or π0 checkpoint.
+`LeRobotEnv` and `LeRobotPolicy` are **seams, not integrations**. Both raise
+`NotImplementedError` with the call they expect; neither has been run against a
+real checkpoint, and nothing in this repository has ever loaded lerobot. What
+they carry is the interface — signatures identical to the toy env and the toy
+baselines — so that the statistics can be validated on a task whose ground truth
+is known, and then run unchanged on gym-pusht or gym-aloha once someone fills
+them in with an ACT, Diffusion Policy, SmolVLA, or pi0 checkpoint.
+
+That split is the point of the repository rather than a gap in it: the part
+worth trusting is the part that can be tested without a GPU, and it is tested.
+But it would be dishonest to call this "LeRobot support", so it is not called
+that.
 
 One design note: **action chunking belongs in the policy adapter, not the
 runner.** A chunking policy returns several future actions at once; buffering
@@ -123,8 +131,8 @@ driven. Temporal ensembling goes in the same place.
 vlaeval/
   protocol.py   seeded episodes, step limits, fingerprinting
   results.py    Wilson intervals, exact McNemar, failure taxonomy, power
-  envs.py       ReachEnv (dependency-free), LeRobot adapter
-  policies.py   random / greedy / avoidant baselines, LeRobot adapter
+  envs.py       ReachEnv (dependency-free), LeRobot seam (unimplemented)
+  policies.py   random / greedy / avoidant baselines, LeRobot seam (unimplemented)
   runner.py     the episode loop
 cli.py          evaluate / power / mismatch
 tests/          19 tests, weighted toward the statistics

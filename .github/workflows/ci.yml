@@ -15,4 +15,42 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python -m pytest tests -q
-      - run: python cli.py evaluate && python cli.py power
+      - run: python cli.py evaluate
+      - name: Assert the statistics the README quotes
+        run: |
+          python - <<'PY'
+          import sys
+          from vlaeval.results import exact_mcnemar_p, wilson_interval, data_needed_for
+
+          failures = []
+
+          def check(label, got, want, tol):
+              ok = abs(got - want) <= tol
+              print(f"{'ok  ' if ok else 'FAIL'} {label}: {got!r} (README says {want})")
+              if not ok:
+                  failures.append(label)
+
+          # The headline claim: 12 wins against 4 losses is not significant.
+          check("exact McNemar, 12 wins / 4 losses", exact_mcnemar_p(12, 4), 0.077, 0.0005)
+
+          # The claim that 50 episodes cannot resolve a 20-point gap.
+          need20 = data_needed_for(0.20)
+          print(f"{'ok  ' if need20 > 50 else 'FAIL'} 20-point gap needs {need20} episodes, more than the 50 usually reported")
+          if need20 <= 50:
+              failures.append("power at 20 points")
+
+          # A Wilson interval on 25/50 must straddle the point estimate and stay in [0, 1].
+          lo, hi = wilson_interval(25, 50)
+          ok = 0.0 <= lo < 0.5 < hi <= 1.0
+          print(f"{'ok  ' if ok else 'FAIL'} Wilson 25/50 = [{lo:.3f}, {hi:.3f}]")
+          if not ok:
+              failures.append("wilson interval")
+
+          if failures:
+              sys.exit("statistics changed without the README changing: " + ", ".join(failures))
+          PY
+      - name: Assert incomparable protocols are still refused
+        run: |
+          python cli.py mismatch | tee mismatch.txt
+          grep -q "refuses: protocols differ" mismatch.txt || {
+            echo "compare() no longer refuses results from different protocols"; exit 1; }
